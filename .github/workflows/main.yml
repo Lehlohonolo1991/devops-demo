@@ -1,0 +1,69 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+    pull_request:
+      branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up environment
+      run: |
+        echo "Setting up
+environment..."
+        echo "GITHUB_SHA=$GITHUB_SHA"
+>> $GITHUB_ENV
+
+    - name: Build container
+      run: |
+        podman build -t devops-demo:$
+{{ github.sha }} .
+
+   - name: Test container
+     run: |
+       podman run -d --name test-
+container -p 8081:80 devops-demo:$
+{{ github.sha }}
+        # Wait for container to start
+        sleep 5
+        # Test if container is running
+        podman ps | grep test-container
+
+   - name: Lint HTML
+     run: |
+       sudo npm install -g htmlhint
+       htmlhint index.html
+
+   - name: Check container security
+     run: |
+       # Basic security check of container
+       podman inspect devops-demo:$
+{{ github.sha }}
+
+   - name: Clean up
+     if: always()
+     run: |
+       podman stop test-container ||
+true
+      podman rm test-container ||
+true
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/
+main' && github.event_name == 'push'
+
+    steps:
+    - name: Deploy notificatoins
+      run: |
+        echo "Deployment would happen
+here..."
+        echo "Successfully deployed
+version ${{ github.sha }}"
